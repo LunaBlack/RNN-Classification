@@ -69,16 +69,16 @@ class Model():
 
     def predict(self, sess, labels, text):
         x = np.array(text)
-        state = self.cell.zero_state(1, tf.float32).eval()
+        state = self.cell.zero_state(len(text), tf.float32).eval()
         feed = {self.input_data: x, self.initial_state: state}
         probs, state = sess.run([self.probs, self.final_state], feed_dict=feed)
 
         results = np.argmax(probs, 1)
         id2labels = dict(zip(labels.values(), labels.keys()))
         labels = map(id2labels.get, results)
-        print probs
-        print results
-        print probs[0][results[0]]
-        print labels
-        return labels[0]
+        # print probs
+        # print results
+        # print probs[0][results[0]]
+        # print labels
+        return labels
 

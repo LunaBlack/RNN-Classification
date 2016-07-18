@@ -2,3 +2,7 @@ data/*
 save/*
 .idea
 dataFetch/*
+data_test/*
+save_tmp/*
+*.pyc
+

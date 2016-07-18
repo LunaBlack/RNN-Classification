@@ -3,6 +3,7 @@
 
 import os, sys
 import time
+import csv
 import argparse
 import cPickle as pickle
 
@@ -19,19 +20,33 @@ def main():
     parser.add_argument('--save_dir', type=str, default='save',
                         help='model directory to store checkpointed models')
     parser.add_argument('--how', type=str, default='sample',
-                        help='sample or accuracy, test one sample or compute accuracy of dataset')
+                        help='sample or text or accuracy, test one sample or test some samples compute accuracy of dataset')
     parser.add_argument('--sample_text', type=str, default=' ',
                         help='sample text')
+    parser.add_argument('--test_dir', type=str, default='data',
+                        help='data directory containing test.csv, necessary when how is test')
     parser.add_argument('--data_dir', type=str, default='data',
-                        help='data directory containing input.csv')
+                        help='data directory containing input.csv, necessary when how is accuracy')
 
     args = parser.parse_args()
     if args.how == 'sample':
         sample(args)
+    elif args.how == 'test':
+        test(args)
     elif args.how == 'accuracy':
         accuracy(args)
     else:
         raise Exception('incorrect argument, input "sample" or "accuracy" after "--how"')
+
+
+def transform(text, seq_length, vocab):
+    x = map(vocab.get, text)
+    x = map(lambda i: i if i else 0, x)
+    if len(x) >= seq_length:
+        x = x[:seq_length]
+    else:
+        x = x + [0] * (seq_length - len(x))
+    return x
 
 
 def sample(args):
@@ -43,20 +58,47 @@ def sample(args):
         labels = pickle.load(f)
 
     model = Model(saved_args, deterministic=True)
-
-    text = map(vocab.get, args.sample_text.decode('utf8'))
-    text = map(lambda i: i if i else 0, text)
-    if len(text) >= saved_args.seq_length:
-        text = text[:saved_args.seq_length]
-    else:
-        text = text + [0] * (saved_args.seq_length - len(text))
+    x = transform(args.sample_text.decode('utf8'), saved_args.seq_length, vocab)
 
     with tf.Session() as sess:
         saver =tf.train.Saver(tf.all_variables())
         ckpt = tf.train.get_checkpoint_state(args.save_dir)
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess, ckpt.model_checkpoint_path)
-            print model.predict(sess, labels, [text])
+            print model.predict(sess, labels, [x])
+
+
+def test(args):
+    with open(os.path.join(args.save_dir, 'config.pkl'), 'rb') as f:
+        saved_args = pickle.load(f)
+    with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'rb') as f:
+        chars, vocab = pickle.load(f)
+    with open(os.path.join(args.save_dir, 'labels.pkl'), 'rb') as f:
+        labels = pickle.load(f)
+
+    model = Model(saved_args, deterministic=True)
+
+    with open(args.test_dir+'/test.csv', 'r') as f:
+        reader = csv.reader(f)
+        texts = list(reader)
+
+    texts = map(lambda i: i[0], texts)
+    x = map(lambda i: transform(i.strip().decode('utf8'), saved_args.seq_length, vocab), texts)
+
+    with tf.Session() as sess:
+        saver =tf.train.Saver(tf.all_variables())
+        ckpt = tf.train.get_checkpoint_state(args.save_dir)
+        if ckpt and ckpt.model_checkpoint_path:
+            saver.restore(sess, ckpt.model_checkpoint_path)
+
+        start = time.time()
+        results = model.predict(sess, labels, x)
+        end = time.time()
+        print 'prediction costs time: ', end - start
+
+    with open(args.test_dir+'/result.csv', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerows(zip(texts, results))
 
 
 def accuracy(args):

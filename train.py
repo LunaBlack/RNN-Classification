@@ -16,6 +16,8 @@ from model import Model
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--vocab_dir', type=str, default='data',
+                        help='directory containing corpus to training vocab_processing')
     parser.add_argument('--data_dir', type=str, default='data',
                         help='data directory containing input.csv')
     parser.add_argument('--save_dir', type=str, default='save',
@@ -34,7 +36,7 @@ def main():
                         help='RNN sequence length')
     parser.add_argument('--num_epochs', type=int, default=100,
                         help='number of epochs')
-    parser.add_argument('--save_every', type=int, default=1,#00,
+    parser.add_argument('--save_every', type=int, default=100,
                         help='save frequency')
     parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='learning rate')
