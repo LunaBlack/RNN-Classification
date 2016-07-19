@@ -44,6 +44,7 @@ class Model():
             with tf.device('/cpu:0'):
                 W = tf.get_variable('W', [args.vocab_size, args.rnn_size])
                 embedded = tf.nn.embedding_lookup(W, self.input_data)
+
                 # shape: (batch_size, seq_length, cell.input_size) => (seq_length, batch_size, cell.input_size)
                 inputs = tf.split(1, args.seq_length, embedded)
                 inputs = [tf.squeeze(input_, [1]) for input_ in inputs]

@@ -14,63 +14,89 @@ from tensorflow.contrib import learn
 
 
 class TextLoader():
-    def __init__(self, data_dir, batch_size, seq_length, encoding='utf8'):
-        self.data_dir = data_dir
+    def __init__(self, utils_dir, data_path, batch_size, seq_length, vocab, labels, encoding='utf8'):
+        self.data_path = data_path
         self.batch_size = batch_size
         self.seq_length = seq_length
         self.encoding = encoding
 
-        input_file = os.path.join(data_dir, 'input.csv')
-        label_file = os.path.join(data_dir, 'labels.pkl')
-        vocab_file = os.path.join(data_dir, 'vocab.pkl')
-        tensor_file = os.path.join(data_dir, 'data.npy')
+        if utils_dir is not None:
+            self.utils_dir = utils_dir
 
-        with open(label_file, 'r') as f:
-            self.labels = pickle.load(f)
-        self.label_size = len(self.labels)
+            label_file = os.path.join(utils_dir, 'labels.pkl')
+            vocab_file = os.path.join(utils_dir, 'vocab.pkl')
+            corpus_file = os.path.join(utils_dir, 'corpus.txt')
 
-        if not (os.path.exists(vocab_file) and os.path.exists(tensor_file)):
-            print 'reading text file'
-            self.preprocess(input_file, vocab_file, tensor_file)
-        else:
-            print 'loading preprocessed files'
-            self.load_preprocessed(vocab_file, tensor_file)
+            with open(label_file, 'r') as f:
+                self.labels = pickle.load(f)
+            self.label_size = len(self.labels)
+
+            if not os.path.exists(vocab_file):
+                print 'reading corpus and processing data'
+                self.preprocess(vocab_file, corpus_file, data_path)
+            else:
+                print 'loading vocab and processing data'
+                self.load_preprocessed(vocab_file, data_path)
+
+        elif vocab is not None and labels is not None:
+            self.vocab = vocab
+            self.vocab_size = len(vocab) + 1
+            self.labels = labels
+            self.label_size = len(self.labels)
+
+            self.load_preprocessed(None, data_path)
 
         self.reset_batch_pointer()
 
 
     def transform(self, d):
-        if len(d) >= self.seq_length:
-            new_d = map(self.vocab.get, d[:self.seq_length])
+        new_d = map(self.vocab.get, d[:self.seq_length])
+        new_d = map(lambda i: i if i else 0, new_d)
+        
+        if len(new_d) >= self.seq_length:
+            new_d = new_d[:self.seq_length]
         else:
-            new_d = map(self.vocab.get, d) + [0] * (self.seq_length - len(d))
+            new_d = new_d + [0] * (self.seq_length - len(new_d))
         return new_d
 
 
-    def preprocess(self, input_file, vocab_file, tensor_file):
-        data = pd.read_csv(input_file, encoding='utf8')
+    def preprocess(self, vocab_file, corpus_file, data_path):
+        with open(corpus_file, 'r') as f:
+            corpus = f.readlines()
+            corpus = ''.join(map(lambda i: i.strip(), corpus))
 
-        counter = collections.Counter(''.join(data['text'].values))
+        try:
+            corpus = corpus.decode('utf8')
+        except Exception as e:
+            # print e
+            pass
+
+        counter = collections.Counter(corpus)
         count_pairs = sorted(counter.items(), key=lambda i: -i[1])
         self.chars, _ = zip(*count_pairs)
-        self.vocab_size = len(self.chars) + 1
-        self.vocab = dict(zip(self.chars, range(1, len(self.chars)+1)))
-
         with open(vocab_file, 'wb') as f:
             pickle.dump(self.chars, f)
 
+        self.vocab_size = len(self.chars) + 1
+        self.vocab = dict(zip(self.chars, range(1, len(self.chars)+1)))
+
+        data = pd.read_csv(data_path, encoding='utf8')
         tensor_x = np.array(list(map(self.transform, data['text'])))
         tensor_y = np.array(list(map(self.labels.get, data['label'])))
         self.tensor = np.c_[tensor_x, tensor_y].astype(int)
-        np.save(tensor_file, self.tensor)
 
 
-    def load_preprocessed(self, vocab_file, tensor_file):
-        with open(vocab_file, 'rb') as f:
-            self.chars = pickle.load(f)
-        self.vocab_size = len(self.chars) + 1
-        self.vocab = dict(zip(self.chars, range(1, len(self.chars)+1)))
-        self.tensor = np.load(tensor_file)
+    def load_preprocessed(self, vocab_file, data_path):
+        if vocab_file is not None:
+            with open(vocab_file, 'rb') as f:
+                self.chars = pickle.load(f)
+            self.vocab_size = len(self.chars) + 1
+            self.vocab = dict(zip(self.chars, range(1, len(self.chars)+1)))
+
+        data = pd.read_csv(data_path, encoding='utf8')
+        tensor_x = np.array(list(map(self.transform, data['text'])))
+        tensor_y = np.array(list(map(self.labels.get, data['label'])))
+        self.tensor = np.c_[tensor_x, tensor_y].astype(int)
 
 
     def create_batches(self):

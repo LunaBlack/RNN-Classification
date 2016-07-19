@@ -16,37 +16,52 @@ from model import Model
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--vocab_dir', type=str, default='data',
-                        help='directory containing corpus to training vocab_processing')
-    parser.add_argument('--data_dir', type=str, default='data',
-                        help='data directory containing input.csv')
+
+    parser.add_argument('--utils_dir', type=str, default='data',
+                        help='''directory containing labels.pkl and corpus.txt:
+                        'corpus.txt'      : corpus to define vocabulary;
+                        'vocab.pkl'       : vocabulary definitions;
+                        'labels.pkl'      : label definitions''')
+
+    parser.add_argument('--data_path', type=str, default='data/input.csv',
+                        help='data to train model')
+
     parser.add_argument('--save_dir', type=str, default='save',
                         help='directory to store checkpointed models')
-    parser.add_argument('--model', type=str, default='bn-lstm',
-                        help='rnn, gru, lstm or bn-lstm, default bn-lstm')
+
+    parser.add_argument('--model', type=str, default='lstm',
+                        help='rnn, gru, lstm or bn-lstm, default lstm')
+
     parser.add_argument('--bn_level', type=int, default=1,
                         help='if model is bn-lstm, enable sequence-wise batch normalization with different level')
+
     parser.add_argument('--rnn_size', type=int, default=128,
                         help='size of RNN hidden state')
+
     parser.add_argument('--num_layers', type=int, default=2,
                         help='number of layers in RNN')
+
     parser.add_argument('--batch_size', type=int, default=32,
                         help='minibatch size')
-    parser.add_argument('--seq_length', type=int, default=10,#300,
+
+    parser.add_argument('--seq_length', type=int, default=10,
                         help='RNN sequence length')
+
     parser.add_argument('--num_epochs', type=int, default=100,
                         help='number of epochs')
+
     parser.add_argument('--save_every', type=int, default=100,
                         help='save frequency')
+
     parser.add_argument('--learning_rate', type=float, default=0.001,
                         help='learning rate')
+
     parser.add_argument('--decay_rate', type=float, default=0.9,
                         help='decay rate for rmsprop')
+
     parser.add_argument('--init_from', type=str, default=None,
                         help='''continue training from saved model at this path. Path must contain files saved by previous training process:
                         'config.pkl'         : configuration;
-                        'chars_vocab.pkl'    : vocabulary definitions;
-                        'labels.pkl'         : label definitions;
                         'checkpoint'         : paths to model file(s) (created by tensorflow).
                                                Note: this file contains absolute paths, be careful when moving files around;
                         'model.ckpt-*'       : file(s) with model definition (created by tensorflow)''')
@@ -56,7 +71,7 @@ def main():
 
 
 def train(args):
-    data_loader = TextLoader(args.data_dir, args.batch_size, args.seq_length)
+    data_loader = TextLoader(args.utils_dir, args.data_path, args.batch_size, args.seq_length, None, None)
     args.vocab_size = data_loader.vocab_size
     args.label_size = data_loader.label_size
 

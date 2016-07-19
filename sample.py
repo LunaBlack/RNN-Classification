@@ -19,20 +19,25 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, default='save',
                         help='model directory to store checkpointed models')
+
     parser.add_argument('--how', type=str, default='sample',
-                        help='sample or text or accuracy, test one sample or test some samples compute accuracy of dataset')
+                        help='''sample / predict / accuracy:
+                        test one sample / predict some samples / compute accuracy of dataset''')
+
     parser.add_argument('--sample_text', type=str, default=' ',
-                        help='sample text')
-    parser.add_argument('--test_dir', type=str, default='data',
-                        help='data directory containing test.csv, necessary when how is test')
-    parser.add_argument('--data_dir', type=str, default='data',
-                        help='data directory containing input.csv, necessary when how is accuracy')
+                        help='sample text, necessary when how is sample')
+
+    parser.add_argument('--data_path', type=str, default='data/test.csv',
+                        help='data to predict or compute accuracy, necessary when how is predict or accuracy')
+
+    parser.add_argument('--result_path', type=str, default='data/result.csv',
+                        help='result of prediction, necessary when how is predict')
 
     args = parser.parse_args()
     if args.how == 'sample':
         sample(args)
-    elif args.how == 'test':
-        test(args)
+    elif args.how == 'predict':
+        predict(args)
     elif args.how == 'accuracy':
         accuracy(args)
     else:
@@ -68,7 +73,7 @@ def sample(args):
             print model.predict(sess, labels, [x])
 
 
-def test(args):
+def predict(args):
     with open(os.path.join(args.save_dir, 'config.pkl'), 'rb') as f:
         saved_args = pickle.load(f)
     with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'rb') as f:
@@ -78,7 +83,7 @@ def test(args):
 
     model = Model(saved_args, deterministic=True)
 
-    with open(args.test_dir+'/test.csv', 'r') as f:
+    with open(args.data_path, 'r') as f:
         reader = csv.reader(f)
         texts = list(reader)
 
@@ -96,7 +101,7 @@ def test(args):
         end = time.time()
         print 'prediction costs time: ', end - start
 
-    with open(args.test_dir+'/result.csv', 'w') as f:
+    with open(args.result_path, 'w') as f:
         writer = csv.writer(f)
         writer.writerows(zip(texts, results))
 
@@ -109,7 +114,7 @@ def accuracy(args):
     with open(os.path.join(args.save_dir, 'labels.pkl'), 'rb') as f:
         labels = pickle.load(f)
 
-    data_loader = TextLoader(args.data_dir, saved_args.batch_size, saved_args.seq_length)
+    data_loader = TextLoader(None, args.data_path, saved_args.batch_size, saved_args.seq_length, vocab, labels)
     model = Model(saved_args, deterministic=True)
 
     with tf.Session() as sess:
