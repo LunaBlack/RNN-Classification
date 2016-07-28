@@ -70,7 +70,7 @@ def sample(args):
         ckpt = tf.train.get_checkpoint_state(args.save_dir)
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess, ckpt.model_checkpoint_path)
-            print model.predict(sess, labels, [x])
+            print model.predict_label(sess, labels, [x])
 
 
 def predict(args):
@@ -97,7 +97,7 @@ def predict(args):
             saver.restore(sess, ckpt.model_checkpoint_path)
 
         start = time.time()
-        results = model.predict(sess, labels, x)
+        results = model.predict_label(sess, labels, x)
         end = time.time()
         print 'prediction costs time: ', end - start
 
@@ -123,36 +123,24 @@ def accuracy(args):
         if ckpt and ckpt.model_checkpoint_path:
             saver.restore(sess, ckpt.model_checkpoint_path)
 
+        data = data_loader.tensor.copy()
+        n_chunks = len(data) / saved_args.batch_size
+        if len(data) % args.batch_size:
+            n_chunks += 1
+        data_list = np.array_split(data, n_chunks, axis=0)
+
         correct_total = 0.0
         num_total = 0.0
-        data_loader.reset_batch_pointer()
-        for b in range(data_loader.num_batches):
+        for m in range(n_chunks):
             start = time.time()
-            state = model.initial_state.eval()
-            x, y = data_loader.next_batch()
-            feed = {model.input_data: x, model.targets: y, model.initial_state: state}
-            sub_accuracy, correct_num, probs = sess.run([model.accuracy, model.correct_num, model.probs], feed_dict=feed)
+            x = data_list[m][:, :-1]
+            y = data_list[m][:, -1]
+            results = model.predict_class(sess, x)
+            correct_num = np.sum(results==y)
             end = time.time()
-            # print '{}/{}, accuracy = {:.3f}, time/batch = {:.3f}'\
-            #     .format(b+1,
-            #             data_loader.num_batches,
-            #             sub_accuracy,
-            #             end - start)
-
-            # ############
-            # if b==0:
-            #     d1 = dict(zip(vocab.values(), vocab.keys()))
-            #     d2 = dict(zip(labels.values(), labels.keys()))
-            #     for n, i in enumerate(x):
-            #         s = []
-            #         for j in i:
-            #             if j:
-            #                 s.append(d1[j])
-            #         print ''.join(s), '\t', d2[y[n]], '\t', y[n], '\t', np.argmax(probs[n], 0)
-            # ############
 
             correct_total += correct_num
-            num_total += saved_args.batch_size
+            num_total += len(x)
 
         accuracy_total = correct_total / num_total
         print 'total_num = {}, total_accuracy = {:.6f}'.format(int(num_total), accuracy_total)

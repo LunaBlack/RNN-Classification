@@ -13,7 +13,7 @@ import tensorflow as tf
 from tensorflow.contrib import learn
 
 
-class TextLoader():
+class TextLoader(object):
     def __init__(self, utils_dir, data_path, batch_size, seq_length, vocab, labels, encoding='utf8'):
         self.data_path = data_path
         self.batch_size = batch_size
@@ -52,7 +52,7 @@ class TextLoader():
     def transform(self, d):
         new_d = map(self.vocab.get, d[:self.seq_length])
         new_d = map(lambda i: i if i else 0, new_d)
-        
+
         if len(new_d) >= self.seq_length:
             new_d = new_d[:self.seq_length]
         else:
