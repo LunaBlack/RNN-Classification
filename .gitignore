@@ -1,4 +1,5 @@
-data/*
+data/ztf.h5
+data/test.csv
 save/*
 .idea
 dataFetch/*

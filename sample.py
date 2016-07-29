@@ -125,7 +125,7 @@ def accuracy(args):
 
         data = data_loader.tensor.copy()
         n_chunks = len(data) / saved_args.batch_size
-        if len(data) % args.batch_size:
+        if len(data) % saved_args.batch_size:
             n_chunks += 1
         data_list = np.array_split(data, n_chunks, axis=0)
 
@@ -138,6 +138,7 @@ def accuracy(args):
             results = model.predict_class(sess, x)
             correct_num = np.sum(results==y)
             end = time.time()
+            print 'batch {}/{} cost time {:.3f}, sub_accuracy = {:.6f}'.format(m+1, n_chunks, end-start, correct_num*1.0/len(x))
 
             correct_total += correct_num
             num_total += len(x)
