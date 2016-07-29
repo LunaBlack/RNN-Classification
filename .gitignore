@@ -6,4 +6,6 @@ dataFetch/*
 data_test/*
 save_tmp/*
 *.pyc
-
+company_data/*
+company_save/*
+.gitignore
