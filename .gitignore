@@ -1,5 +1,7 @@
 data/ztf.h5
-data/test.csv
+data/data (copy).csv
+data/labels (copy).pkl
+data/data_duplicated.csv
 save/*
 .idea
 dataFetch/*
