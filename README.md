@@ -22,5 +22,5 @@ This project currently supports the BASIC-RNN, GRU, LSTM, and BN-LSTM models.
 + data: 训练数据、测试数据、十折交叉验证数据，第一列为文本text，第二列为类label，可修改位置并修改run.py文件或命令行运行的参数
 + save: 保存模型训练的各项参数，可修改位置并修改run.py文件或命令行运行的参数
 + utils: 语料、label对照字典等，可修改位置并修改run.py文件或命令行运行的参数
- - corpus.txt: 语料，*需要提前生成*
- - labels.pkl: 类标号与数字的对照，字典形式{类标号:从0开始的数字}，pickle形式，*需要提前生成*
+  - corpus.txt: 语料，*需要提前生成*
+  - labels.pkl: 类标号与数字的对照，字典形式{类标号:从0开始的数字}，pickle形式，*需要提前生成*
