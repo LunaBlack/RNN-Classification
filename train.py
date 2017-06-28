@@ -17,13 +17,13 @@ from model import Model
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--utils_dir', type=str, default='data',
+    parser.add_argument('--utils_dir', type=str, default='utils',
                         help='''directory containing labels.pkl and corpus.txt:
                         'corpus.txt'      : corpus to define vocabulary;
                         'vocab.pkl'       : vocabulary definitions;
                         'labels.pkl'      : label definitions''')
 
-    parser.add_argument('--data_path', type=str, default='data/input.csv',
+    parser.add_argument('--data_path', type=str, default='data/train.csv',
                         help='data to train model')
 
     parser.add_argument('--save_dir', type=str, default='save',
@@ -32,16 +32,13 @@ def main():
     parser.add_argument('--model', type=str, default='lstm',
                         help='rnn, gru, lstm or bn-lstm, default lstm')
 
-    parser.add_argument('--bn_level', type=int, default=1,
-                        help='if model is bn-lstm, enable sequence-wise batch normalization with different level')
-
     parser.add_argument('--rnn_size', type=int, default=128,
                         help='size of RNN hidden state')
 
     parser.add_argument('--num_layers', type=int, default=2,
                         help='number of layers in RNN')
 
-    parser.add_argument('--batch_size', type=int, default=32,
+    parser.add_argument('--batch_size', type=int, default=128,
                         help='minibatch size')
 
     parser.add_argument('--seq_length', type=int, default=20,
@@ -59,40 +56,40 @@ def main():
     parser.add_argument('--decay_rate', type=float, default=0.9,
                         help='decay rate for rmsprop')
 
-    parser.add_argument('--init_from', type=str, default=None,
-                        help='''continue training from saved model at this path. Path must contain files saved by previous training process:
-                        'config.pkl'         : configuration;
-                        'checkpoint'         : paths to model file(s) (created by tensorflow).
-                                               Note: this file contains absolute paths, be careful when moving files around;
-                        'model.ckpt-*'       : file(s) with model definition (created by tensorflow)''')
+    parser.add_argument('--continue_training', type=str, default='False',
+                        help='whether to continue training.')
 
     args = parser.parse_args()
     train(args)
 
 
 def train(args):
-    data_loader = TextLoader(args.utils_dir, args.data_path, args.batch_size, args.seq_length, None, None)
+    if args.continue_training in ['True', 'true']:
+        args.continue_training = True
+    else:
+        args.continue_training = False
+
+    data_loader = TextLoader(True, args.utils_dir, args.data_path, args.batch_size, args.seq_length, None, None)
     args.vocab_size = data_loader.vocab_size
     args.label_size = data_loader.label_size
 
-    if args.init_from is not None:
-        assert os.path.isdir(args.init_from), '%s must be a path' % args.init_from
-        assert os.path.isfile(os.path.join(args.init_from, 'config.pkl')), 'config.pkl file does not exist in path %s' % args.init_from
-        assert os.path.isfile(os.path.join(args.init_from, 'chars_vocab.pkl')), 'chars_vocab.pkl file does not exist in path %s' % args.init_from
-        assert os.path.isfile(os.path.join(args.init_from, 'labels.pkl')), 'labels.pkl file does not exist in path %s' % args.init_from
-        ckpt = tf.train.get_checkpoint_state(args.init_from)
+    if args.continue_training:
+        assert os.path.isfile(os.path.join(args.save_dir, 'config.pkl')), 'config.pkl file does not exist in path %s' % args.save_dir
+        assert os.path.isfile(os.path.join(args.utils_dir, 'chars_vocab.pkl')), 'chars_vocab.pkl file does not exist in path %s' % args.utils_dir
+        assert os.path.isfile(os.path.join(args.utils_dir, 'labels.pkl')), 'labels.pkl file does not exist in path %s' % args.utils_dir
+        ckpt = tf.train.get_checkpoint_state(args.save_dir)
         assert ckpt, 'No checkpoint found'
         assert ckpt.model_checkpoint_path, 'No model path found in checkpoint'
 
-        with open(os.path.join(args.init_from, 'config.pkl'), 'rb') as f:
+        with open(os.path.join(args.save_dir, 'config.pkl'), 'rb') as f:
             saved_model_args = pickle.load(f)
         need_be_same = ['model', 'rnn_size', 'num_layers', 'seq_length']
         for checkme in need_be_same:
             assert vars(saved_model_args)[checkme]==vars(args)[checkme], 'command line argument and saved model disagree on %s' % checkme
 
-        with open(os.path.join(args.init_from, 'chars_vocab.pkl'), 'rb') as f:
+        with open(os.path.join(args.utils_dir, 'chars_vocab.pkl'), 'rb') as f:
             saved_chars, saved_vocab = pickle.load(f)
-        with open(os.path.join(args.init_from, 'labels.pkl'), 'rb') as f:
+        with open(os.path.join(args.utils_dir, 'labels.pkl'), 'rb') as f:
             saved_labels = pickle.load(f)
         assert saved_chars==data_loader.chars, 'data and loaded model disagree on character set'
         assert saved_vocab==data_loader.vocab, 'data and loaded model disagree on dictionary mappings'
@@ -100,9 +97,9 @@ def train(args):
 
     with open(os.path.join(args.save_dir, 'config.pkl'), 'wb') as f:
         pickle.dump(args, f)
-    with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'wb') as f:
+    with open(os.path.join(args.utils_dir, 'chars_vocab.pkl'), 'wb') as f:
         pickle.dump((data_loader.chars, data_loader.vocab), f)
-    with open(os.path.join(args.save_dir, 'labels.pkl'), 'wb') as f:
+    with open(os.path.join(args.utils_dir, 'labels.pkl'), 'wb') as f:
         pickle.dump(data_loader.labels, f)
 
     model = Model(args)
@@ -112,7 +109,7 @@ def train(args):
         sess.run(init)
         saver = tf.train.Saver(tf.all_variables())
 
-        if args.init_from is not None:
+        if args.continue_training:
             saver.restore(sess, ckpt.model_checkpoint_path)
 
         for e in range(args.num_epochs):
@@ -121,9 +118,8 @@ def train(args):
 
             for b in range(data_loader.num_batches):
                 start = time.time()
-                state = model.initial_state.eval()
                 x, y = data_loader.next_batch()
-                feed = {model.input_data: x, model.targets: y, model.initial_state: state}
+                feed = {model.input_data: x, model.targets: y}
                 train_loss, state, _, accuracy = sess.run([model.cost, model.final_state, model.optimizer, model.accuracy], feed_dict=feed)
                 end = time.time()
                 print '{}/{} (epoch {}), train_loss = {:.3f}, accuracy = {:.3f}, time/batch = {:.3f}'\
@@ -143,4 +139,3 @@ def train(args):
 
 if __name__ == '__main__':
     main()
-

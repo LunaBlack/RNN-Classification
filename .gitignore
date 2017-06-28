@@ -1,13 +1,6 @@
-data/ztf.h5
-data/data (copy).csv
-data/labels (copy).pkl
-data/data_duplicated.csv
-save/*
 .idea
-dataFetch/*
-data_test/*
-save_tmp/*
 *.pyc
-company_data/*
-company_save/*
 .gitignore
+save/*
+chars_vocab.pkl
+vocab.pkl

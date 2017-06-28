@@ -17,10 +17,17 @@ from model import Model
 
 def main():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument('--utils_dir', type=str, default='utils',
+                        help='''directory containing labels.pkl and corpus.txt:
+                        'corpus.txt'      : corpus to define vocabulary;
+                        'vocab.pkl'       : vocabulary definitions;
+                        'labels.pkl'      : label definitions''')
+
     parser.add_argument('--save_dir', type=str, default='save',
                         help='model directory to store checkpointed models')
 
-    parser.add_argument('--how', type=str, default='sample',
+    parser.add_argument('--how', type=str, default='accuracy',
                         help='''sample / predict / accuracy:
                         test one sample / predict some samples / compute accuracy of dataset''')
 
@@ -57,9 +64,9 @@ def transform(text, seq_length, vocab):
 def sample(args):
     with open(os.path.join(args.save_dir, 'config.pkl'), 'rb') as f:
         saved_args = pickle.load(f)
-    with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'rb') as f:
+    with open(os.path.join(args.utils_dir, 'chars_vocab.pkl'), 'rb') as f:
         chars, vocab = pickle.load(f)
-    with open(os.path.join(args.save_dir, 'labels.pkl'), 'rb') as f:
+    with open(os.path.join(args.utils_dir, 'labels.pkl'), 'rb') as f:
         labels = pickle.load(f)
 
     model = Model(saved_args, deterministic=True)
@@ -76,9 +83,9 @@ def sample(args):
 def predict(args):
     with open(os.path.join(args.save_dir, 'config.pkl'), 'rb') as f:
         saved_args = pickle.load(f)
-    with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'rb') as f:
+    with open(os.path.join(args.utils_dir, 'chars_vocab.pkl'), 'rb') as f:
         chars, vocab = pickle.load(f)
-    with open(os.path.join(args.save_dir, 'labels.pkl'), 'rb') as f:
+    with open(os.path.join(args.utils_dir, 'labels.pkl'), 'rb') as f:
         labels = pickle.load(f)
 
     model = Model(saved_args, deterministic=True)
@@ -109,12 +116,12 @@ def predict(args):
 def accuracy(args):
     with open(os.path.join(args.save_dir, 'config.pkl'), 'rb') as f:
         saved_args = pickle.load(f)
-    with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'rb') as f:
+    with open(os.path.join(args.utils_dir, 'chars_vocab.pkl'), 'rb') as f:
         chars, vocab = pickle.load(f)
-    with open(os.path.join(args.save_dir, 'labels.pkl'), 'rb') as f:
+    with open(os.path.join(args.utils_dir, 'labels.pkl'), 'rb') as f:
         labels = pickle.load(f)
 
-    data_loader = TextLoader(None, args.data_path, saved_args.batch_size, saved_args.seq_length, vocab, labels)
+    data_loader = TextLoader(False, args.utils_dir, args.data_path, saved_args.batch_size, saved_args.seq_length, vocab, labels)
     model = Model(saved_args, deterministic=True)
 
     with tf.Session() as sess:

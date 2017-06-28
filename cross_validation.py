@@ -19,7 +19,7 @@ def main():
     rootdir = os.path.dirname(__file__)
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--utils_dir', type=str, default=rootdir+'/data/',
+    parser.add_argument('--utils_dir', type=str, default=rootdir+'/utils/',
                         help='''directory containing labels.pkl and corpus.txt:
                         'corpus.txt'      : corpus to define vocabulary;
                         'vocab.pkl'       : vocabulary definitions;
@@ -34,22 +34,19 @@ def main():
     parser.add_argument('--model', type=str, default='lstm',
                         help='rnn, gru, lstm or bn-lstm, default lstm')
 
-    parser.add_argument('--bn_level', type=int, default=1,
-                        help='if model is bn-lstm, enable sequence-wise batch normalization with different level')
-
     parser.add_argument('--rnn_size', type=int, default=128,
                         help='size of RNN hidden state')
 
     parser.add_argument('--num_layers', type=int, default=2,
                         help='number of layers in RNN')
 
-    parser.add_argument('--batch_size', type=int, default=32,
+    parser.add_argument('--batch_size', type=int, default=128,
                         help='minibatch size')
 
     parser.add_argument('--seq_length', type=int, default=20,
                         help='RNN sequence length')
 
-    parser.add_argument('--num_epochs', type=int, default=50,
+    parser.add_argument('--num_epochs', type=int, default=100,
                         help='number of epochs')
 
     parser.add_argument('--save_every', type=int, default=100,
@@ -66,15 +63,15 @@ def main():
 
 
 def cross_validation(args):
-    data_loader = TextLoader(args.utils_dir, args.data_path, args.batch_size, args.seq_length, None, None)
+    data_loader = TextLoader(True, args.utils_dir, args.data_path, args.batch_size, args.seq_length, None, None)
     args.vocab_size = data_loader.vocab_size
     args.label_size = data_loader.label_size
 
     with open(os.path.join(args.save_dir, 'config.pkl'), 'wb') as f:
         pickle.dump(args, f)
-    with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'wb') as f:
+    with open(os.path.join(args.utils_dir, 'chars_vocab.pkl'), 'wb') as f:
         pickle.dump((data_loader.chars, data_loader.vocab), f)
-    with open(os.path.join(args.save_dir, 'labels.pkl'), 'wb') as f:
+    with open(os.path.join(args.utils_dir, 'labels.pkl'), 'wb') as f:
         pickle.dump(data_loader.labels, f)
 
     data = data_loader.tensor.copy()
@@ -100,9 +97,8 @@ def cross_validation(args):
 
                 for b in range(data_loader.num_batches):
                     start = time.time()
-                    state = model.initial_state.eval()
                     x, y = data_loader.next_batch()
-                    feed = {model.input_data: x, model.targets: y, model.initial_state: state}
+                    feed = {model.input_data: x, model.targets: y}
                     train_loss, state, _, accuracy = sess.run([model.cost, model.final_state, model.optimizer, model.accuracy], feed_dict=feed)
                     end = time.time()
                     print '{}/{} (epoch {}), train_loss = {:.3f}, accuracy = {:.3f}, time/batch = {:.3f}'\

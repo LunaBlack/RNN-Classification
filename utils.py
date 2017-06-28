@@ -14,13 +14,13 @@ from tensorflow.contrib import learn
 
 
 class TextLoader(object):
-    def __init__(self, utils_dir, data_path, batch_size, seq_length, vocab, labels, encoding='utf8'):
+    def __init__(self, is_training, utils_dir, data_path, batch_size, seq_length, vocab, labels, encoding='utf8'):
         self.data_path = data_path
         self.batch_size = batch_size
         self.seq_length = seq_length
         self.encoding = encoding
 
-        if utils_dir is not None:
+        if is_training:
             self.utils_dir = utils_dir
 
             label_file = os.path.join(utils_dir, 'labels.pkl')
@@ -120,4 +120,3 @@ class TextLoader(object):
     def reset_batch_pointer(self):
         self.create_batches()
         self.pointer = 0
-
