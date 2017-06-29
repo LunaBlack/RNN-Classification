@@ -7,6 +7,10 @@ This project constructs a text classifier based on RNN/LSTM model, based on Tens
 
 This project currently supports the BASIC-RNN, GRU, LSTM, and BN-LSTM models.
 
+本项目基于字符，即采用了character embedding的方法，故不需要分词。因此，语料用于生成字符索引，只需要包含所有用到的字符即可。
+
+This project, which uses the method of character embedding, is based on characters, so word segmentation is not necessary. Thus, the corpus, which only needs to contain all the characters used, is used to generate the character index.
+
 ## 运行方式
  + 命令行，运行train.py训练模型，运行test.py测试模型，所需参数用help查看。
  + 运行run.py文件，自行修改各项参数
